@@ -223,3 +223,7 @@ __marimo__/
 
 migrations/*
 migrations
+
+documents/
+documents
+*.pdf

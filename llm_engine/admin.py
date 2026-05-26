@@ -1,5 +1,7 @@
 from django.contrib import admin
+
 from .models import LLMModel, Document, DocumentChunk, LLMInteraction
+from .services import DocumentIngestionService
 
 @admin.register(LLMModel)
 class LLMModelAdmin(admin.ModelAdmin):
@@ -23,16 +25,32 @@ class DocumentAdmin(admin.ModelAdmin):
     readonly_fields = ("uploaded_at", "updated_at")
     inlines = [DocumentChunkInline]
 
-    actions = ["mark_for_reprocessing"]
+    actions = ["process_documents"]
 
-    def mark_for_reprocessing(self, request, queryset):
-        # Placeholder action for future ingestion pipeline
-        count = queryset.count()
-        self.message_user(
-            request,
-            f"{count} document(s) selected for reprocessing. Implement ingestion service next."
-        )
-    mark_for_reprocessing.short_description = "Mark selected documents for reprocessing"
+    def process_documents(self, request, queryset):
+        success_count = 0
+        failed_count = 0
+
+        for doc in queryset:
+            success = DocumentIngestionService.process_document(doc)
+            if success:
+                success_count += 1
+            else:
+                failed_count += 1
+
+        if success_count > 0:
+            self.message_user(
+                request, 
+                f"Successfully parsed and chunked {success_count} document(s) and failed {failed_count} document(s)"
+            )
+        if failed_count > 0:
+            self.message_user(
+                request, 
+                f"Failed to process {failed_count} document(s). See logs for details.",
+                level='ERROR'
+            )
+
+    process_documents.short_description = "Process / Chunk selected documents"
     
 @admin.register(DocumentChunk)
 class DocumentChunkAdmin(admin.ModelAdmin):

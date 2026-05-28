@@ -227,3 +227,8 @@ migrations
 documents/
 documents
 *.pdf
+
+#chroma
+chroma_db
+
+test_retrieval.py

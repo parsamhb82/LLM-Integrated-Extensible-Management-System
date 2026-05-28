@@ -16,6 +16,11 @@ class Document(models.Model):
     title = models.CharField(max_length=255)
     file = models.FileField(upload_to='documents/') 
     content = models.TextField(blank=True, null=True) 
+
+    is_processed = models.BooleanField(
+        default=False,
+        help_text="Whether the document has been chunked and indexed for retrieval."
+    )
     
     uploaded_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

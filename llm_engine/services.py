@@ -66,6 +66,7 @@ class DocumentIngestionService:
         with transaction.atomic():
             # 2. Save extracted content to the Document
             document.content = extracted_text
+            document.is_processed = True
             document.save()
 
             # 3. Clear existing chunks if this is a re-run

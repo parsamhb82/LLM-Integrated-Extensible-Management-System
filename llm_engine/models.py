@@ -53,6 +53,7 @@ class LLMInteraction(models.Model):
         ('pending', 'Pending'),
         ('success', 'Success'),
         ('failed', 'Failed'),
+        ('running', 'Running'),
     ]
     status = models.CharField(
         max_length=10, 

@@ -42,6 +42,7 @@ class DocumentChunk(models.Model):
 
 class LLMInteraction(models.Model):
     llm_model = models.ForeignKey(LLMModel, on_delete=models.PROTECT, related_name="interactions")
+    target_documents = models.ManyToManyField('Document', blank=True, help_text="Select documents to query.")
 
     context_chunks = models.ManyToManyField(DocumentChunk, blank=True)
 

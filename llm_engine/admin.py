@@ -2,6 +2,8 @@ from django.contrib import admin
 
 from .models import LLMModel, Document, DocumentChunk, LLMInteraction
 from .services import DocumentIngestionService
+from .qa_service import QAService
+
 
 @admin.register(LLMModel)
 class LLMModelAdmin(admin.ModelAdmin):
@@ -65,8 +67,27 @@ class DocumentChunkAdmin(admin.ModelAdmin):
 
 @admin.register(LLMInteraction)
 class LLMInteractionAdmin(admin.ModelAdmin):
-    list_display = ("id", "llm_model", "status", "created_at")
-    list_filter = ("status", "llm_model", "created_at")
-    search_fields = ("prompt", "response_text", "llm_model__name")
-    readonly_fields = ("created_at",)
-    filter_horizontal = ("context_chunks",)
+    list_display = ('prompt', 'status', 'created_at')
+    readonly_fields = ('status', 'response_text', 'raw_request', 'raw_response', 'context_chunks')
+    filter_horizontal = ('target_documents', 'context_chunks')
+    
+    actions = ['run_qa_action']
+
+    @admin.action(description="Run Q&A on selected interactions")
+    def run_qa_action(self, request, queryset):
+        for interaction in queryset:
+            try:
+                # Extract doc IDs from the M2M field
+                doc_ids = list(interaction.target_documents.values_list('id', flat=True))
+                
+                # Use your existing QAService
+                # Note: We are overwriting the interaction logic here
+                answer = QAService.ask(
+                    question=interaction.prompt,
+                    document_ids=doc_ids if doc_ids else None,
+                    k=5,
+                    interaction=interaction
+                )
+                self.message_user(request, f"Successfully processed: {interaction.prompt[:20]}...")
+            except Exception as e:
+                self.message_user(request, f"Error processing {interaction.prompt[:20]}: {str(e)}", level='ERROR')

@@ -34,7 +34,7 @@ DEBUG = env("DEBUG")
 OPENROUTER_API_KEY = env('OPENROUTER_API_KEY')
 
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition

@@ -6,7 +6,6 @@ from llm_engine.models import LLMInteraction, Document, LLMModel
 from llm_engine.qa_service import QAService
 from .serializers import (
     QAAskRequestSerializer,
-    QAAskResponseSerializer,
     LLMInteractionSerializer,
     DocumentUploadSerializer,
 )

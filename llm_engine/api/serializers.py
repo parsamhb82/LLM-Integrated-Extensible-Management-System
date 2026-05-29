@@ -41,7 +41,16 @@ class DocumentMiniSerializer(serializers.ModelSerializer):
 
 class DocumentUploadSerializer(serializers.Serializer):
     file = serializers.FileField()
-    title = serializers.CharField(max_length=255, required=False)
+    title = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        file_obj = attrs["file"]
+        title = attrs.get("title")
+
+        if not title:  # None or "" -> fallback
+            attrs["title"] = file_obj.name
+
+        return attrs
 
 
 
@@ -71,6 +80,3 @@ class LLMInteractionSerializer(serializers.ModelSerializer):
         )
 
 
-class QAAskResponseSerializer(serializers.Serializer):
-    interaction = LLMInteractionSerializer()
-    answer = serializers.CharField()

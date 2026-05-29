@@ -109,3 +109,18 @@ class DocumentIngestionService:
             document.is_processed = False
             document.save(update_fields=["is_processed", "updated_at"])
             return False
+        
+    @classmethod
+    def reprocess_document(cls, document: Document) -> bool:
+        """
+        Wrapper to handle the full lifecycle of an update.
+        """
+        # 1. Clean up old data
+        delete_document_vectors(document.id)
+        document.chunks.all().delete()
+        document.content = ""
+        document.is_processed = False
+        document.save()
+        
+        # 2. Trigger the existing process logic
+        return cls.process_document(document)

@@ -1,3 +1,8 @@
+import os
+
+from django.http import FileResponse, Http404
+from django.conf import settings
+
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -8,9 +13,10 @@ from .serializers import (
     QAAskRequestSerializer,
     LLMInteractionSerializer,
     DocumentUploadSerializer,
+    DocumentUpdateSerializer,
 )
 from llm_engine.services import DocumentIngestionService
-
+from llm_engine.vector_store import delete_document_vectors
 
 class QAAskAPIView(APIView):
     """
@@ -144,3 +150,123 @@ class DocumentUploadAPIView(APIView):
                 {"message": f"Error during processing: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+        
+class DocumentUpdateAPIView(APIView):
+    """
+    PUT /api/documents/{id}/update/
+    PATCH /api/documents/{id}/update/
+
+    If a new file is uploaded:
+    - replace the file
+    - delete old chunks
+    - reset processed state
+    - reprocess document
+    """
+
+    def put(self, request, id):
+        return self._update(request, id)
+
+    def patch(self, request, id):
+        return self._update(request, id)
+
+    def _update(self, request, id):
+        try:
+            doc = Document.objects.get(id=id)
+        except Document.DoesNotExist:
+            return Response(
+                {"detail": "Document not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = DocumentUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        new_title = data.get("title")
+        new_file = data.get("file")
+
+        try:
+            reprocessed = False
+
+            if new_title is not None:
+                doc.title = new_title
+
+            if new_file is not None:
+                doc.file = new_file
+                doc.save()
+            
+                # Delegate the heavy lifting to the service
+                success = DocumentIngestionService.reprocess_document(doc)
+                reprocessed = True
+
+                if not success:
+                    return Response(
+                        {
+                            "message": "Document updated, but reprocessing failed.",
+                            "id": doc.id,
+                        },
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    )
+            else:
+                doc.save()
+
+            return Response(
+                {
+                    "message": "Document updated successfully.",
+                    "id": doc.id,
+                    "reprocessed": reprocessed,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            return Response(
+                {"message": f"Error during update: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+class DocumentDeleteAPIView(APIView):
+    """
+    DELETE /api/documents/{id}/delete/
+    """
+
+    def delete(self, request, id):
+        try:
+            doc = Document.objects.get(id=id)
+        except Document.DoesNotExist:
+            return Response(
+                {"detail": "Document not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        try:
+            try:
+                delete_document_vectors(id)
+            except Exception as e:
+                # Optional: Decide if you want to abort the deletion if vectors fail
+                print(f"Warning: Failed to cleanup vectors: {e}")
+
+            doc.delete()
+
+            return Response(
+                {"message": "Document deleted successfully."},
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            return Response(
+                {"message": f"Error during delete: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+def download_by_filename(request, filename):
+        file_path = os.path.join(settings.MEDIA_ROOT, "documents", filename)
+
+        if not os.path.exists(file_path):
+            raise Http404("File not found")
+
+        return FileResponse(
+            open(file_path, "rb"),
+            as_attachment=True,
+            filename=filename
+        )

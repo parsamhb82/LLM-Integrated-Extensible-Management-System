@@ -80,3 +80,18 @@ class LLMInteractionSerializer(serializers.ModelSerializer):
         )
 
 
+class DocumentUpdateSerializer(serializers.Serializer):
+    file = serializers.FileField(required=False)
+    title = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        if not attrs:
+            raise serializers.ValidationError("At least one of 'title' or 'file' must be provided.")
+
+        if "title" in attrs and not attrs["title"]:
+            if "file" in attrs:
+                attrs["title"] = attrs["file"].name
+            else:
+                raise serializers.ValidationError({"title": "Title cannot be blank unless file is provided."})
+
+        return attrs

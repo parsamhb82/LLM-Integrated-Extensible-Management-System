@@ -157,7 +157,11 @@ Verify `OPENROUTER_API_KEY` is set correctly in your environment and restart the
 - Enforce authentication via Django Rest Framework permissions
 
 ## Run-docker
-
+Make sure Docker and Docker Compose are installed, then run:
 ```bash
 docker compose up -d --build
+```
+To stop the containers:
+```bash
+docker compose down
 ```

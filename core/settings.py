@@ -140,3 +140,5 @@ CHROMA_DIR = BASE_DIR / "chroma_db"
 
 # Multilingual embedding model (better for Persian + English)
 EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+
+EMBEDDING_DEVICE = "cpu"
